@@ -1,0 +1,5 @@
+{
+  "name": "AlgoViz AI",
+  "description": "An interactive Data Structure and Algorithm simulator powered by Gemini AI for real-time explanations and complexity analysis.",
+  "requestFramePermissions": []
+}
