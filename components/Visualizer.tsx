@@ -16,7 +16,184 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, category, maxValue
     );
   }
 
-  const { data, comparedIndices, swappedIndices, sortedIndices, pivotIndex, auxiliaryData } = step;
+  const { data, comparedIndices, swappedIndices, sortedIndices, pivotIndex, auxiliaryData, graphAdjacency } = step;
+
+  // Tree Visualizer
+  if (category === AlgoCategory.Tree) {
+    // Basic Layout calculation for a binary tree
+    // We assume data is a level-order array
+    const getCoords = (index: number, totalWidth: number, totalHeight: number) => {
+        const level = Math.floor(Math.log2(index + 1));
+        const nodesInLevel = Math.pow(2, level);
+        const positionInLevel = index - (nodesInLevel - 1);
+        
+        // Simple fixed height levels or dynamic
+        const y = 50 + level * 80;
+        
+        // Split width into 2^level parts
+        const sliceWidth = totalWidth / nodesInLevel;
+        const x = sliceWidth * positionInLevel + sliceWidth / 2;
+        
+        return { x, y };
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col items-center justify-between pb-4">
+             {/* Tree SVG */}
+             <div className="flex-1 w-full relative overflow-auto flex items-center justify-center">
+                <svg width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
+                    {/* Edges */}
+                    {data.map((_, idx) => {
+                        const leftChildIdx = 2 * idx + 1;
+                        const rightChildIdx = 2 * idx + 2;
+                        const { x: x1, y: y1 } = getCoords(idx, 800, 500);
+                        
+                        const lines = [];
+                        if (leftChildIdx < data.length) {
+                             const { x: x2, y: y2 } = getCoords(leftChildIdx, 800, 500);
+                             lines.push(<line key={`l-${idx}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4b5563" strokeWidth="2" />);
+                        }
+                        if (rightChildIdx < data.length) {
+                             const { x: x2, y: y2 } = getCoords(rightChildIdx, 800, 500);
+                             lines.push(<line key={`r-${idx}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4b5563" strokeWidth="2" />);
+                        }
+                        return lines;
+                    })}
+
+                    {/* Nodes */}
+                    {data.map((val, idx) => {
+                        const { x, y } = getCoords(idx, 800, 500);
+                        let fillColor = '#1f2937'; // gray-900
+                        let strokeColor = '#4b5563'; // gray-600
+                        let textColor = '#9ca3af'; // gray-400
+                        
+                        if (sortedIndices.includes(idx)) {
+                            fillColor = '#059669'; // emerald-600
+                            strokeColor = '#34d399'; // emerald-400
+                            textColor = '#ffffff';
+                        } else if (comparedIndices.includes(idx)) {
+                            fillColor = '#d97706'; // amber-600
+                            strokeColor = '#fbbf24'; // amber-400
+                            textColor = '#ffffff';
+                        }
+                        
+                        return (
+                            <g key={idx}>
+                                <circle cx={x} cy={y} r="20" fill={fillColor} stroke={strokeColor} strokeWidth="2" className="transition-colors duration-300" />
+                                <text x={x} y={y} dy=".3em" textAnchor="middle" fill={textColor} fontSize="14" fontWeight="bold" className="pointer-events-none">{val}</text>
+                            </g>
+                        );
+                    })}
+                </svg>
+             </div>
+             
+             {/* Traversal Output Display */}
+             <div className="w-full max-w-2xl bg-gray-900/50 p-4 rounded-lg border border-gray-800">
+                <h4 className="text-xs text-gray-500 uppercase tracking-widest mb-2">Traversal Output</h4>
+                <div className="flex gap-2 flex-wrap">
+                    {auxiliaryData && auxiliaryData.length > 0 ? (
+                        auxiliaryData.map((val, i) => (
+                            <span key={i} className="text-emerald-400 font-mono font-bold animate-in fade-in slide-in-from-bottom-2">
+                                {val}{i < auxiliaryData.length - 1 ? ' → ' : ''}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-gray-600 italic text-sm">Waiting to start...</span>
+                    )}
+                </div>
+             </div>
+        </div>
+    );
+  }
+
+  // Graph Visualizer
+  if (category === AlgoCategory.Graph) {
+      // Circular Layout
+      const centerX = 400;
+      const centerY = 250;
+      const radius = 180;
+      const n = data.length;
+      
+      const getCoords = (index: number) => {
+          const angle = (index / n) * 2 * Math.PI - Math.PI / 2; // Start from top
+          return {
+              x: centerX + radius * Math.cos(angle),
+              y: centerY + radius * Math.sin(angle)
+          };
+      };
+
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-between pb-4">
+             {/* Graph SVG */}
+             <div className="flex-1 w-full relative overflow-auto flex items-center justify-center">
+                <svg width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
+                    {/* Edges */}
+                    {graphAdjacency && graphAdjacency.map((neighbors, u) => {
+                         const { x: x1, y: y1 } = getCoords(u);
+                         return neighbors.map(v => {
+                             // Draw edge only if u < v to avoid duplicates in undirected graph drawing
+                             if (u < v) {
+                                 const { x: x2, y: y2 } = getCoords(v);
+                                 return <line key={`${u}-${v}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#374151" strokeWidth="2" />;
+                             }
+                             return null;
+                         });
+                    })}
+
+                    {/* Nodes */}
+                    {data.map((val, idx) => {
+                        const { x, y } = getCoords(idx);
+                        
+                        let fillColor = '#1f2937'; // gray-900
+                        let strokeColor = '#4b5563'; // gray-600
+                        let textColor = '#9ca3af'; // gray-400
+                        let scale = 1;
+
+                        if (sortedIndices.includes(idx)) { // Using sortedIndices as 'Visited'
+                            fillColor = '#059669'; // emerald-600
+                            strokeColor = '#34d399'; // emerald-400
+                            textColor = '#ffffff';
+                        } 
+                        
+                        if (comparedIndices.includes(idx)) { // Using comparedIndices as 'Current/Active'
+                            fillColor = '#d97706'; // amber-600
+                            strokeColor = '#fbbf24'; // amber-400
+                            textColor = '#ffffff';
+                            scale = 1.1;
+                        }
+                        
+                        return (
+                            <g key={idx} className="transition-all duration-300" style={{ transformOrigin: `${x}px ${y}px`, transform: `scale(${scale})` }}>
+                                <circle cx={x} cy={y} r="24" fill={fillColor} stroke={strokeColor} strokeWidth="3" />
+                                <text x={x} y={y} dy=".3em" textAnchor="middle" fill={textColor} fontSize="14" fontWeight="bold" className="pointer-events-none">{val}</text>
+                                {/* Index Label */}
+                                <text x={x} y={y + 40} textAnchor="middle" fill="#4b5563" fontSize="10" className="pointer-events-none">idx: {idx}</text>
+                            </g>
+                        );
+                    })}
+                </svg>
+             </div>
+
+             {/* Queue/Stack State */}
+             <div className="w-full max-w-2xl bg-gray-900/50 p-4 rounded-lg border border-gray-800 flex justify-between items-center">
+                <div>
+                    <h4 className="text-xs text-gray-500 uppercase tracking-widest mb-1">Structure State</h4>
+                    <div className="flex gap-2">
+                        {auxiliaryData && auxiliaryData.length > 0 ? auxiliaryData.map((val, i) => (
+                             <div key={i} className="bg-blue-900/50 border border-blue-700 text-blue-200 px-2 py-1 rounded text-xs font-mono">
+                                 {data[val] ?? val}
+                             </div>
+                        )) : <span className="text-gray-600 text-sm">Empty</span>}
+                    </div>
+                </div>
+                <div className="text-right">
+                    <h4 className="text-xs text-gray-500 uppercase tracking-widest mb-1">Visited Count</h4>
+                    <span className="text-xl font-bold text-gray-300">{sortedIndices.length} / {data.length}</span>
+                </div>
+             </div>
+        </div>
+      );
+  }
 
   // Data Structure Visualizer (Stack / Queue)
   if (category === AlgoCategory.DataStructure) {

@@ -1,4 +1,4 @@
-import { AlgorithmName, SimulationStep } from '../types';
+import { AlgorithmName, SimulationStep, AlgoCategory } from '../types';
 
 // Helper to create a step object
 const createStep = (
@@ -8,7 +8,8 @@ const createStep = (
   sortedIndices: number[] = [],
   description: string = '',
   pivotIndex?: number,
-  auxiliaryData?: number[]
+  auxiliaryData?: number[],
+  graphAdjacency?: number[][]
 ): SimulationStep => ({
   data: [...data],
   comparedIndices,
@@ -17,12 +18,35 @@ const createStep = (
   description,
   pivotIndex,
   auxiliaryData: auxiliaryData ? [...auxiliaryData] : undefined,
+  graphAdjacency: graphAdjacency ? JSON.parse(JSON.stringify(graphAdjacency)) : undefined,
 });
+
+// Helper to generate a deterministic graph (Adjacency List) based on node count
+const generateGraph = (n: number): number[][] => {
+  const adj: number[][] = Array.from({ length: n }, () => []);
+  // Create a cycle to ensure connectivity
+  for (let i = 0; i < n; i++) {
+    const next = (i + 1) % n;
+    adj[i].push(next);
+    adj[next].push(i);
+  }
+  // Add some chords/random edges if n > 4 for interest
+  if (n > 4) {
+      const addEdge = (u: number, v: number) => {
+          if (!adj[u].includes(v)) adj[u].push(v);
+          if (!adj[v].includes(u)) adj[v].push(u);
+      };
+      addEdge(0, Math.floor(n/2));
+      addEdge(1, Math.floor(n/2) + 1);
+  }
+  // Sort for consistency
+  return adj.map(row => row.sort((a,b) => a - b));
+};
 
 export const ALGORITHMS: Record<string, any> = {
   [AlgorithmName.BubbleSort]: {
     name: AlgorithmName.BubbleSort,
-    category: 'Sorting',
+    category: AlgoCategory.Sorting,
     description: 'Repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.',
     defaultData: [64, 34, 25, 12, 22, 11, 90, 5],
     complexity: { time: 'O(n²)', space: 'O(1)' },
@@ -55,7 +79,7 @@ export const ALGORITHMS: Record<string, any> = {
 
   [AlgorithmName.SelectionSort]: {
     name: AlgorithmName.SelectionSort,
-    category: 'Sorting',
+    category: AlgoCategory.Sorting,
     description: 'Divides the input list into two parts: a sorted sublist of items which is built up from left to right at the front (left) of the list and a sublist of the remaining unsorted items.',
     defaultData: [64, 25, 12, 22, 11],
     complexity: { time: 'O(n²)', space: 'O(1)' },
@@ -95,7 +119,7 @@ export const ALGORITHMS: Record<string, any> = {
 
   [AlgorithmName.InsertionSort]: {
     name: AlgorithmName.InsertionSort,
-    category: 'Sorting',
+    category: AlgoCategory.Sorting,
     description: 'Builds the final sorted array one item at a time. It is much less efficient on large lists than more advanced algorithms such as quicksort, heapsort, or merge sort.',
     defaultData: [12, 11, 13, 5, 6],
     complexity: { time: 'O(n²)', space: 'O(1)' },
@@ -134,7 +158,7 @@ export const ALGORITHMS: Record<string, any> = {
 
   [AlgorithmName.MergeSort]: {
     name: AlgorithmName.MergeSort,
-    category: 'Sorting',
+    category: AlgoCategory.Sorting,
     description: 'A divide and conquer algorithm that divides the input array into two halves, calls itself for the two halves, and then merges the two sorted halves.',
     defaultData: [12, 11, 13, 5, 6, 7],
     complexity: { time: 'O(n log n)', space: 'O(n)' },
@@ -205,7 +229,7 @@ export const ALGORITHMS: Record<string, any> = {
 
   [AlgorithmName.QuickSort]: {
     name: AlgorithmName.QuickSort,
-    category: 'Sorting',
+    category: AlgoCategory.Sorting,
     description: 'Divides the array into subarrays by selecting a pivot element and positioning it so that all smaller elements are to the left and larger elements to the right.',
     defaultData: [40, 10, 80, 30, 90, 50, 70],
     complexity: { time: 'O(n log n)', space: 'O(log n)' },
@@ -249,9 +273,113 @@ export const ALGORITHMS: Record<string, any> = {
     }
   },
 
+  [AlgorithmName.HeapSort]: {
+    name: AlgorithmName.HeapSort,
+    category: AlgoCategory.Sorting,
+    description: 'Converts the array into a Max Heap, then repeatedly extracts the maximum element from the heap and places it at the end of the array.',
+    defaultData: [12, 11, 13, 5, 6, 7, 1, 9],
+    complexity: { time: 'O(n log n)', space: 'O(1)' },
+    pseudoCode: `heapSort(arr):
+  buildMaxHeap(arr)
+  for i from n-1 down to 1:
+    swap(arr[0], arr[i])
+    heapify(arr, i, 0)`,
+    generator: function* (initialData: number[]) {
+      let arr = [...initialData];
+      let n = arr.length;
+      let sortedIndices: number[] = [];
+
+      // Helper generator for heapify
+      function* heapify(n: number, i: number) {
+        let largest = i;
+        let left = 2 * i + 1;
+        let right = 2 * i + 2;
+
+        if (left < n) {
+          yield createStep(arr, [largest, left], [], sortedIndices, `Comparing root ${arr[largest]} with left child ${arr[left]}`);
+          if (arr[left] > arr[largest]) largest = left;
+        }
+
+        if (right < n) {
+          yield createStep(arr, [largest, right], [], sortedIndices, `Comparing largest ${arr[largest]} with right child ${arr[right]}`);
+          if (arr[right] > arr[largest]) largest = right;
+        }
+
+        if (largest !== i) {
+          [arr[i], arr[largest]] = [arr[largest], arr[i]];
+          yield createStep(arr, [i, largest], [i, largest], sortedIndices, `Swapping ${arr[i]} and ${arr[largest]} to maintain heap`);
+          yield* heapify(n, largest);
+        }
+      }
+
+      // Build heap
+      for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+        yield createStep(arr, [i], [], sortedIndices, `Building Heap: Heapifying index ${i}`);
+        yield* heapify(n, i);
+      }
+
+      // Extract elements
+      for (let i = n - 1; i > 0; i--) {
+        yield createStep(arr, [0, i], [], sortedIndices, `Moving max ${arr[0]} to end (index ${i})`);
+        [arr[0], arr[i]] = [arr[i], arr[0]];
+        yield createStep(arr, [0, i], [0, i], sortedIndices, `Swapped max to index ${i}`);
+        
+        sortedIndices.push(i);
+        yield createStep(arr, [], [], sortedIndices, `Index ${i} is sorted`);
+        
+        yield* heapify(i, 0);
+      }
+      sortedIndices.push(0);
+      yield createStep(arr, [], [], sortedIndices, 'Sorting Complete');
+    }
+  },
+
+  [AlgorithmName.ShellSort]: {
+    name: AlgorithmName.ShellSort,
+    category: AlgoCategory.Sorting,
+    description: 'An optimization of insertion sort that allows the exchange of items that are far apart. It uses a gap sequence to determine which elements to compare.',
+    defaultData: [12, 34, 54, 2, 3, 15, 22, 11],
+    complexity: { time: 'O(n log n) - O(n²)', space: 'O(1)' },
+    pseudoCode: `for gap = n/2 down to 1:
+  for i = gap to n-1:
+    temp = arr[i]
+    j = i
+    while j >= gap and arr[j-gap] > temp:
+      arr[j] = arr[j-gap]
+      j -= gap
+    arr[j] = temp`,
+    generator: function* (initialData: number[]) {
+      let arr = [...initialData];
+      let n = arr.length;
+      
+      for (let gap = Math.floor(n/2); gap > 0; gap = Math.floor(gap/2)) {
+        yield createStep(arr, [], [], [], `Starting new pass with Gap size: ${gap}`);
+
+        for (let i = gap; i < n; i += 1) {
+          let temp = arr[i];
+          let j;
+          yield createStep(arr, [i], [], [], `Picking ${temp} for insertion at gap ${gap}`);
+
+          for (j = i; j >= gap; j -= gap) {
+              yield createStep(arr, [j, j - gap], [], [], `Comparing ${arr[j-gap]} > ${temp}?`);
+              if (arr[j - gap] > temp) {
+                  arr[j] = arr[j - gap];
+                  yield createStep(arr, [j, j - gap], [j], [], `Moved ${arr[j]} to index ${j}`);
+              } else {
+                  break;
+              }
+          }
+          arr[j] = temp;
+          yield createStep(arr, [j], [j], [], `Placed ${temp} at correct position ${j}`);
+        }
+      }
+      yield createStep(arr, [], [], Array.from({ length: n }, (_, k) => k), 'Sorting Complete');
+    }
+  },
+
   [AlgorithmName.LinearSearch]: {
       name: AlgorithmName.LinearSearch,
-      category: 'Searching',
+      category: AlgoCategory.Searching,
       description: 'Iterates through the list sequentially to find the target element.',
       defaultData: [10, 50, 30, 70, 80, 20, 90, 40],
       complexity: { time: 'O(n)', space: 'O(1)' },
@@ -279,7 +407,7 @@ return -1`,
 
   [AlgorithmName.BinarySearch]: {
     name: AlgorithmName.BinarySearch,
-    category: 'Searching',
+    category: AlgoCategory.Searching,
     description: 'Search a sorted array by repeatedly dividing the search interval in half.',
     defaultData: [2, 5, 8, 12, 16, 23, 38, 56, 72, 91],
     complexity: { time: 'O(log n)', space: 'O(1)' },
@@ -321,7 +449,7 @@ return -1`,
 
   [AlgorithmName.StackOps]: {
     name: AlgorithmName.StackOps,
-    category: 'Data Structure',
+    category: AlgoCategory.DataStructure,
     description: 'A Stack is a linear data structure which follows the LIFO (Last In First Out) order.',
     defaultData: [10, 20, 30, 40, 50],
     complexity: { time: 'O(1) (Push/Pop)', space: 'O(n)' },
@@ -355,7 +483,7 @@ peek(): return stack.last()`,
 
   [AlgorithmName.QueueOps]: {
       name: AlgorithmName.QueueOps,
-      category: 'Data Structure',
+      category: AlgoCategory.DataStructure,
       description: 'A Queue is a linear data structure which follows the FIFO (First In First Out) order.',
       defaultData: [10, 20, 30, 40, 50],
       complexity: { time: 'O(1) (Enqueue/Dequeue)', space: 'O(n)' },
@@ -387,6 +515,208 @@ front(): return queue.first()`,
           }
           
           yield createStep(inputSequence, [], [], [], `Queue Empty`, undefined, queue);
+      }
+    },
+
+    // Tree Traversals
+    [AlgorithmName.Inorder]: {
+      name: AlgorithmName.Inorder,
+      category: AlgoCategory.Tree,
+      description: 'Traverses a binary tree in the order: Left Subtree, Root, Right Subtree.',
+      defaultData: [1, 2, 3, 4, 5, 6, 7],
+      complexity: { time: 'O(n)', space: 'O(h) where h is height' },
+      pseudoCode: `inorder(node):
+  if node is null: return
+  inorder(node.left)
+  visit(node)
+  inorder(node.right)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData];
+        const visited: number[] = []; // Stores indices of fully processed nodes
+        const output: number[] = []; // Stores values in traversal order
+        
+        function* traverse(idx: number): Generator<SimulationStep> {
+            if (idx >= arr.length) return; // Simple check for array-based complete binary tree
+            
+            // Highlight current node (Yellow) - Pre-traversal
+            yield createStep(arr, [idx], [], visited, `Traversing to Node ${arr[idx]}`, undefined, output);
+            
+            // Recurse Left
+            yield* traverse(2 * idx + 1);
+            
+            // Visit Root (Green)
+            visited.push(idx);
+            output.push(arr[idx]);
+            yield createStep(arr, [idx], [], visited, `Visiting Node ${arr[idx]}`, undefined, output);
+            
+            // Recurse Right
+            yield* traverse(2 * idx + 2);
+        }
+        
+        yield* traverse(0);
+        yield createStep(arr, [], [], visited, 'Traversal Complete', undefined, output);
+      }
+    },
+
+    [AlgorithmName.Preorder]: {
+      name: AlgorithmName.Preorder,
+      category: AlgoCategory.Tree,
+      description: 'Traverses a binary tree in the order: Root, Left Subtree, Right Subtree.',
+      defaultData: [1, 2, 3, 4, 5, 6, 7],
+      complexity: { time: 'O(n)', space: 'O(h) where h is height' },
+      pseudoCode: `preorder(node):
+  if node is null: return
+  visit(node)
+  preorder(node.left)
+  preorder(node.right)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData];
+        const visited: number[] = [];
+        const output: number[] = [];
+        
+        function* traverse(idx: number): Generator<SimulationStep> {
+            if (idx >= arr.length) return;
+            
+            // Visit Root First
+            visited.push(idx);
+            output.push(arr[idx]);
+            yield createStep(arr, [idx], [], visited, `Visiting Node ${arr[idx]}`, undefined, output);
+            
+            // Recurse Left
+            yield* traverse(2 * idx + 1);
+            
+            // Recurse Right
+            yield* traverse(2 * idx + 2);
+        }
+        
+        yield* traverse(0);
+        yield createStep(arr, [], [], visited, 'Traversal Complete', undefined, output);
+      }
+    },
+
+    [AlgorithmName.Postorder]: {
+      name: AlgorithmName.Postorder,
+      category: AlgoCategory.Tree,
+      description: 'Traverses a binary tree in the order: Left Subtree, Right Subtree, Root.',
+      defaultData: [1, 2, 3, 4, 5, 6, 7],
+      complexity: { time: 'O(n)', space: 'O(h) where h is height' },
+      pseudoCode: `postorder(node):
+  if node is null: return
+  postorder(node.left)
+  postorder(node.right)
+  visit(node)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData];
+        const visited: number[] = [];
+        const output: number[] = [];
+        
+        function* traverse(idx: number): Generator<SimulationStep> {
+            if (idx >= arr.length) return;
+            
+            yield createStep(arr, [idx], [], visited, `Traversing to Node ${arr[idx]}`, undefined, output);
+            
+            // Recurse Left
+            yield* traverse(2 * idx + 1);
+            
+            // Recurse Right
+            yield* traverse(2 * idx + 2);
+            
+            // Visit Root Last
+            visited.push(idx);
+            output.push(arr[idx]);
+            yield createStep(arr, [idx], [], visited, `Visiting Node ${arr[idx]}`, undefined, output);
+        }
+        
+        yield* traverse(0);
+        yield createStep(arr, [], [], visited, 'Traversal Complete', undefined, output);
+      }
+    },
+
+    // GRAPH ALGORITHMS
+    [AlgorithmName.BFS]: {
+      name: AlgorithmName.BFS,
+      category: AlgoCategory.Graph,
+      description: 'Breadth-First Search traverses a graph level by level, exploring all neighbors of a node before moving deeper.',
+      defaultData: [0, 1, 2, 3, 4, 5, 6],
+      complexity: { time: 'O(V + E)', space: 'O(V)' },
+      pseudoCode: `bfs(start):
+  queue = [start]
+  visited = {start}
+  while queue is not empty:
+    node = queue.pop()
+    for neighbor in adj[node]:
+      if neighbor not in visited:
+        visited.add(neighbor)
+        queue.push(neighbor)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData];
+        const n = arr.length;
+        const adj = generateGraph(n);
+        const startNode = 0;
+        
+        const queue: number[] = [startNode];
+        const visited: number[] = [startNode];
+        const output: number[] = []; // Order of visitation
+
+        // Initial state
+        yield createStep(arr, [startNode], [], visited, `Starting BFS from Node ${arr[startNode]}`, undefined, queue, adj);
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            output.push(arr[current]);
+            
+            yield createStep(arr, [current], [], visited, `Visiting Node ${arr[current]}`, undefined, queue, adj);
+            
+            for (const neighbor of adj[current]) {
+                if (!visited.includes(neighbor)) {
+                    visited.push(neighbor);
+                    queue.push(neighbor);
+                    yield createStep(arr, [current, neighbor], [], visited, `Found unvisited neighbor ${arr[neighbor]}, adding to Queue`, undefined, queue, adj);
+                } else {
+                     yield createStep(arr, [current, neighbor], [], visited, `Neighbor ${arr[neighbor]} already visited`, undefined, queue, adj);
+                }
+            }
+        }
+        yield createStep(arr, [], [], visited, `BFS Complete. Order: ${output.join(' -> ')}`, undefined, queue, adj);
+      }
+    },
+
+    [AlgorithmName.DFS]: {
+      name: AlgorithmName.DFS,
+      category: AlgoCategory.Graph,
+      description: 'Depth-First Search explores as far as possible along each branch before backtracking.',
+      defaultData: [0, 1, 2, 3, 4, 5, 6],
+      complexity: { time: 'O(V + E)', space: 'O(V)' },
+      pseudoCode: `dfs(node, visited):
+  visited.add(node)
+  for neighbor in adj[node]:
+    if neighbor not in visited:
+      dfs(neighbor, visited)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData];
+        const n = arr.length;
+        const adj = generateGraph(n);
+        const visited: number[] = [];
+        const stack: number[] = []; // For visualization of recursion/stack
+        
+        function* dfsHelper(u: number): Generator<SimulationStep> {
+            visited.push(u);
+            stack.push(arr[u]);
+            yield createStep(arr, [u], [], visited, `Visiting Node ${arr[u]}`, undefined, stack, adj);
+            
+            for (const v of adj[u]) {
+                if (!visited.includes(v)) {
+                    yield createStep(arr, [u, v], [], visited, `Going deeper to neighbor ${arr[v]}`, undefined, stack, adj);
+                    yield* dfsHelper(v);
+                    // Backtracking step
+                    yield createStep(arr, [u], [], visited, `Backtracked to Node ${arr[u]}`, undefined, stack, adj);
+                }
+            }
+            stack.pop();
+        }
+
+        yield* dfsHelper(0);
+        yield createStep(arr, [], [], visited, 'DFS Complete', undefined, stack, adj);
       }
     }
 };
