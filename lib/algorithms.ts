@@ -1,3 +1,4 @@
+
 import { AlgorithmName, SimulationStep, AlgoCategory } from '../types';
 
 // Helper to create a step object
@@ -515,6 +516,48 @@ front(): return queue.first()`,
           }
           
           yield createStep(inputSequence, [], [], [], `Queue Empty`, undefined, queue);
+      }
+    },
+
+    [AlgorithmName.LinkedList]: {
+      name: AlgorithmName.LinkedList,
+      category: AlgoCategory.DataStructure,
+      description: 'A linear data structure where elements are stored in nodes, each pointing to the next node.',
+      defaultData: [10, 20, 30, 40],
+      complexity: { time: 'O(1) Insert/Delete at known position, O(n) Search', space: 'O(n)' },
+      pseudoCode: `insertHead(val):
+  node = new Node(val)
+  node.next = head
+  head = node`,
+      generator: function* (initialData: number[]) {
+          let list = [...initialData];
+          
+          // 1. Initial State
+          yield createStep(list, [], [], [], `Initial Linked List: ${list.join(' -> ')}`);
+          
+          // 2. Traversal
+          for(let i=0; i<list.length; i++) {
+              yield createStep(list, [i], [], [], `Traversing: Node ${list[i]} points to ${i < list.length - 1 ? list[i+1] : 'NULL'}`);
+          }
+  
+          // 3. Insert Head
+          let newVal = 5;
+          yield createStep(list, [], [], [], `Inserting ${newVal} at Head`);
+          list.unshift(newVal);
+          yield createStep(list, [0], [0], [], `New Head is ${newVal}`, undefined, undefined); 
+  
+          // 4. Insert at Index 2
+          newVal = 25;
+          yield createStep(list, [0, 1], [], [], `Traversing to index 2 to insert ${newVal}`);
+          list.splice(2, 0, newVal);
+          yield createStep(list, [2], [2], [], `Inserted ${newVal} at index 2`);
+  
+          // 5. Delete Tail
+          yield createStep(list, [list.length-2], [], [], `Traversing to second to last node to delete tail`);
+          const removed = list.pop();
+          yield createStep(list, [], [], [], `Deleted Tail node (${removed})`);
+          
+          yield createStep(list, [], [], [], `Final List State`);
       }
     },
 

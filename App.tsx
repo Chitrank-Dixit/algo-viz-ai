@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Visualizer } from './components/Visualizer';
@@ -127,6 +128,7 @@ const App: React.FC = () => {
             <div className="flex-1 relative p-4 md:p-8">
                <Visualizer 
                   step={currentStep} 
+                  algorithm={selectedAlgoName}
                   category={currentAlgoDef.category} 
                   maxValue={maxValue}
                />

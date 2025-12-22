@@ -1,3 +1,4 @@
+
 export enum AlgoCategory {
   Sorting = 'Sorting',
   Searching = 'Searching',
@@ -18,6 +19,7 @@ export enum AlgorithmName {
   BinarySearch = 'Binary Search',
   StackOps = 'Stack Operations',
   QueueOps = 'Queue Operations',
+  LinkedList = 'Linked List Operations',
   Inorder = 'Inorder Traversal',
   Preorder = 'Preorder Traversal',
   Postorder = 'Postorder Traversal',

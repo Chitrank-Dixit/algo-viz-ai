@@ -1,13 +1,16 @@
+
 import React from 'react';
-import { SimulationStep, AlgoCategory } from '../types';
+import { SimulationStep, AlgoCategory, AlgorithmName } from '../types';
+import { ArrowRight, MoveRight } from 'lucide-react';
 
 interface VisualizerProps {
   step: SimulationStep | null;
+  algorithm: AlgorithmName;
   category: AlgoCategory;
   maxValue: number;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ step, category, maxValue }) => {
+export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, category, maxValue }) => {
   if (!step) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
@@ -195,9 +198,47 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, category, maxValue
       );
   }
 
-  // Data Structure Visualizer (Stack / Queue)
+  // Data Structure Visualizer (Stack / Queue / Linked List)
   if (category === AlgoCategory.DataStructure) {
-      const isStack = step.description.includes('Stack') || step.description.includes('Push') || step.description.includes('Pop');
+      if (algorithm === AlgorithmName.LinkedList) {
+          return (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-12 overflow-x-auto">
+                  <div className="text-gray-400 font-mono text-sm">{step.description}</div>
+                  <div className="flex items-center gap-2 p-8 min-w-full justify-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-widest mr-4">Head</div>
+                      {data.map((val, idx) => {
+                          const isActive = comparedIndices.includes(idx);
+                          const isModified = swappedIndices.includes(idx);
+                          
+                          let borderColor = 'border-gray-600';
+                          let bgColor = 'bg-gray-800';
+                          let textColor = 'text-white';
+                          
+                          if (isActive) {
+                              borderColor = 'border-yellow-500';
+                              bgColor = 'bg-yellow-500/20';
+                          } else if (isModified) {
+                              borderColor = 'border-green-500';
+                              bgColor = 'bg-green-500/20';
+                          }
+
+                          return (
+                              <React.Fragment key={idx}>
+                                  <div className={`relative w-16 h-12 border-2 ${borderColor} ${bgColor} rounded flex items-center justify-center font-mono font-bold transition-all duration-300 shadow-lg`}>
+                                      <span className={textColor}>{val}</span>
+                                      <span className="absolute -bottom-5 text-[10px] text-gray-500">Node</span>
+                                  </div>
+                                  <MoveRight className="text-gray-600" size={24} />
+                              </React.Fragment>
+                          );
+                      })}
+                      <div className="px-3 py-1 rounded border border-gray-700 bg-gray-900 text-gray-500 text-xs font-mono">NULL</div>
+                  </div>
+              </div>
+          );
+      }
+
+      const isStack = algorithm === AlgorithmName.StackOps;
       // For Stack/Queue, we mostly care about 'auxiliaryData' which holds the actual structure state in our generator
       const structData = auxiliaryData || []; 
 
