@@ -4,13 +4,15 @@ import { Sidebar } from './components/Sidebar';
 import { Visualizer } from './components/Visualizer';
 import { ControlPanel } from './components/ControlPanel';
 import { AiAssistant } from './components/AiAssistant';
+import { PseudocodeModal } from './components/PseudocodeModal';
 import { ALGORITHMS } from './lib/algorithms';
 import { AlgorithmName, SimulationStep } from './types';
-import { Menu } from 'lucide-react';
+import { Menu, Code } from 'lucide-react';
 
 const App: React.FC = () => {
   const [selectedAlgoName, setSelectedAlgoName] = useState<AlgorithmName>(AlgorithmName.BubbleSort);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   
   // Simulation State
   const [inputDataStr, setInputDataStr] = useState<string>('');
@@ -39,7 +41,6 @@ const App: React.FC = () => {
       generatedSteps.push(result.value);
       result = generator.next();
     }
-    // Add final state if needed, but generator usually handles it.
     
     setSteps(generatedSteps);
     setCurrentStepIndex(0);
@@ -116,10 +117,19 @@ const App: React.FC = () => {
              </div>
            </div>
            
-           <div className="hidden md:block">
-              <span className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">
-                {currentAlgoDef.complexity.time} Time
-              </span>
+           <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsCodeModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 rounded-lg text-xs font-medium transition-all"
+              >
+                <Code size={14} />
+                <span className="hidden sm:inline">Pseudocode</span>
+              </button>
+              <div className="hidden md:block">
+                <span className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">
+                  {currentAlgoDef.complexity.time} Time
+                </span>
+              </div>
            </div>
         </header>
 
@@ -164,6 +174,13 @@ const App: React.FC = () => {
             onApplyData={handleDataApply}
         />
       </div>
+
+      <PseudocodeModal 
+        isOpen={isCodeModalOpen} 
+        onClose={() => setIsCodeModalOpen(false)} 
+        algorithmName={currentAlgoDef.name}
+        pseudoCode={currentAlgoDef.pseudoCode}
+      />
 
       <AiAssistant algorithm={selectedAlgoName} currentStep={currentStep} />
     </div>
