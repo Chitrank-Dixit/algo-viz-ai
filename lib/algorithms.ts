@@ -222,6 +222,139 @@ export const ALGORITHMS: Record<string, any> = {
     }
   },
 
+  [AlgorithmName.ShellSort]: {
+    name: AlgorithmName.ShellSort,
+    category: AlgoCategory.Sorting,
+    description: 'Generalization of insertion sort that allows the exchange of items that are far apart.',
+    defaultData: [64, 34, 25, 12, 22, 11, 90, 5],
+    complexity: { time: 'O(n log n) to O(n²)', space: 'O(1)' },
+    pseudoCode: `for gap = N/2 down to 1:
+  for i = gap to N-1:
+    temp = arr[i]
+    for j = i; j >= gap and arr[j-gap] > temp; j -= gap:
+      arr[j] = arr[j-gap]
+    arr[j] = temp`,
+    generator: function* (initialData: number[]) {
+      let arr = [...initialData];
+      let n = arr.length;
+      for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) {
+        yield createStep(arr, [], [], [], `New Gap size: ${gap}`);
+        for (let i = gap; i < n; i++) {
+          let temp = arr[i];
+          let j = i;
+          yield createStep(arr, [i, j - gap], [], [], `Current element ${temp} with gap ${gap}`);
+          while (j >= gap && arr[j - gap] > temp) {
+            arr[j] = arr[j - gap];
+            yield createStep(arr, [j, j - gap], [j], [], `Shifting ${arr[j]} forward`);
+            j -= gap;
+          }
+          arr[j] = temp;
+          yield createStep(arr, [j], [j], [], `Placed ${temp} at index ${j}`);
+        }
+      }
+      yield createStep(arr, [], [], Array.from({ length: n }, (_, k) => k), 'Sorting Complete');
+    }
+  },
+
+  [AlgorithmName.HeapSort]: {
+    name: AlgorithmName.HeapSort,
+    category: AlgoCategory.Sorting,
+    description: 'Comparison-based sorting technique based on Binary Heap data structure.',
+    defaultData: [12, 11, 13, 5, 6, 7],
+    complexity: { time: 'O(n log n)', space: 'O(1)' },
+    pseudoCode: `buildMaxHeap(arr)
+for i = N-1 down to 1:
+  swap(arr[0], arr[i])
+  heapify(arr, i, 0)`,
+    generator: function* (initialData: number[]) {
+      let arr = [...initialData];
+      let n = arr.length;
+
+      function* heapify(size: number, i: number): Generator<SimulationStep> {
+        let largest = i;
+        let left = 2 * i + 1;
+        let right = 2 * i + 2;
+
+        yield createStep(arr, [i], [], [], `Heapifying node at index ${i}`);
+
+        if (left < size) {
+          yield createStep(arr, [i, left], [], [], `Comparing ${arr[i]} and left child ${arr[left]}`);
+          if (arr[left] > arr[largest]) largest = left;
+        }
+
+        if (right < size) {
+          yield createStep(arr, [largest, right], [], [], `Comparing current largest and right child ${arr[right]}`);
+          if (arr[right] > arr[largest]) largest = right;
+        }
+
+        if (largest !== i) {
+          yield createStep(arr, [i, largest], [i, largest], [], `Swapping parent ${arr[i]} with largest child ${arr[largest]}`);
+          [arr[i], arr[largest]] = [arr[largest], arr[i]];
+          yield* heapify(size, largest);
+        }
+      }
+
+      // Build heap
+      for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+        yield* heapify(n, i);
+      }
+
+      // Extract elements
+      let sortedIndices: number[] = [];
+      for (let i = n - 1; i > 0; i--) {
+        yield createStep(arr, [0, i], [0, i], sortedIndices, `Swapping root ${arr[0]} with last element ${arr[i]}`);
+        [arr[0], arr[i]] = [arr[i], arr[0]];
+        sortedIndices.push(i);
+        yield* heapify(i, 0);
+      }
+      sortedIndices.push(0);
+      yield createStep(arr, [], [], sortedIndices, 'Sorting Complete');
+    }
+  },
+
+  [AlgorithmName.RadixSort]: {
+    name: AlgorithmName.RadixSort,
+    category: AlgoCategory.Sorting,
+    description: 'Non-comparative integer sorting algorithm that sorts data with integer keys by grouping keys by digits.',
+    defaultData: [170, 45, 75, 90, 802, 24, 2, 66],
+    complexity: { time: 'O(nk)', space: 'O(n+k)' },
+    pseudoCode: `for exp = 1, 10, 100... while max/exp > 0:
+  countSort(arr, exp)`,
+    generator: function* (initialData: number[]) {
+      let arr = [...initialData];
+      let n = arr.length;
+      let maxVal = Math.max(...arr);
+
+      for (let exp = 1; Math.floor(maxVal / exp) > 0; exp *= 10) {
+        yield createStep(arr, [], [], [], `Sorting by digit in place value: ${exp}`);
+        let output = new Array(n).fill(0);
+        let count = new Array(10).fill(0);
+
+        for (let i = 0; i < n; i++) {
+          let digit = Math.floor(arr[i] / exp) % 10;
+          count[digit]++;
+          yield createStep(arr, [i], [], [], `Counting digit ${digit} for value ${arr[i]}`);
+        }
+
+        for (let i = 1; i < 10; i++) count[i] += count[i - 1];
+
+        for (let i = n - 1; i >= 0; i--) {
+          let digit = Math.floor(arr[i] / exp) % 10;
+          let pos = count[digit] - 1;
+          output[pos] = arr[i];
+          count[digit]--;
+          yield createStep(arr, [i], [pos], [], `Stable sort: Placing ${arr[i]} into output position ${pos}`);
+        }
+
+        for (let i = 0; i < n; i++) {
+          arr[i] = output[i];
+          yield createStep(arr, [], [i], [], `Updating array with sorted place values`);
+        }
+      }
+      yield createStep(arr, [], [], Array.from({length: n}, (_, i) => i), 'Sorting Complete');
+    }
+  },
+
   [AlgorithmName.LinearSearch]: {
       name: AlgorithmName.LinearSearch,
       category: AlgoCategory.Searching,

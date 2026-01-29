@@ -17,6 +17,7 @@ export enum AlgorithmName {
   QuickSort = 'Quick Sort',
   HeapSort = 'Heap Sort',
   ShellSort = 'Shell Sort',
+  RadixSort = 'Radix Sort',
   LinearSearch = 'Linear Search',
   BinarySearch = 'Binary Search',
   StackOps = 'Stack Operations',
