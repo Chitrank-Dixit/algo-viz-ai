@@ -5,6 +5,7 @@ export enum AlgoCategory {
   DataStructure = 'Data Structure',
   Tree = 'Tree',
   Graph = 'Graph',
+  Array = 'Array Operations',
 }
 
 export enum AlgorithmName {
@@ -25,6 +26,8 @@ export enum AlgorithmName {
   Postorder = 'Postorder Traversal',
   BFS = 'Breadth-First Search',
   DFS = 'Depth-First Search',
+  LeftRotate = 'Left Array Rotation',
+  RightRotate = 'Right Array Rotation',
 }
 
 export interface SimulationStep {
@@ -32,10 +35,10 @@ export interface SimulationStep {
   comparedIndices: number[]; // Indices currently being compared or active
   swappedIndices: number[]; // Indices just swapped or modified
   sortedIndices: number[]; // Indices confirmed sorted or finalized
-  pivotIndex?: number; // For QuickSort
+  pivotIndex?: number; // For QuickSort or rotating element index
   description: string; // Text description of step
   codeLine?: number; // Highlighted line of pseudo-code
-  auxiliaryData?: number[]; // For things like Merge Sort auxiliary array or Stack/Queue visualization state if distinct
+  auxiliaryData?: number[]; // For things like Merge Sort auxiliary array or Buffer element
   graphAdjacency?: number[][]; // Adjacency list for graph algorithms [[1,2], [0,3], ...]
 }
 

@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { ALGORITHMS } from '../lib/algorithms';
 import { AlgorithmName, AlgoCategory } from '../types';
-import { Activity, Search, BarChart2, Layers, Network, Share2 } from 'lucide-react';
+import { Activity, Search, BarChart2, Layers, Network, Share2, RotateCw } from 'lucide-react';
 
 interface SidebarProps {
   selectedAlgo: AlgorithmName;
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ selectedAlgo, onSelect, isOpen
              if (algo.category === AlgoCategory.DataStructure) Icon = Layers;
              if (algo.category === AlgoCategory.Tree) Icon = Network;
              if (algo.category === AlgoCategory.Graph) Icon = Share2;
+             if (algo.category === AlgoCategory.Array) Icon = RotateCw;
 
              return (
               <button
@@ -49,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ selectedAlgo, onSelect, isOpen
       
       <div className="p-4 border-t border-gray-800">
         <div className="text-xs text-gray-500 text-center">
-            {isOpen ? "v1.2.0 • Powered by Gemini" : "v1.2"}
+            {isOpen ? "v1.3.0 • Powered by Gemini" : "v1.3"}
         </div>
       </div>
     </div>

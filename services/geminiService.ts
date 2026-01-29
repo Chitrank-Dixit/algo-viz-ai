@@ -1,19 +1,16 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { AlgorithmName, SimulationStep } from "../types";
 import { ALGORITHMS } from "../lib/algorithms";
 
-const apiKey = process.env.API_KEY || '';
-
-// We use a singleton pattern for the AI client if the key is present
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+// Always use process.env.API_KEY directly for initialization as per @google/genai guidelines.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateExplanation = async (
   algorithm: AlgorithmName,
   step: SimulationStep | null,
   context: string
 ): Promise<string> => {
-  if (!ai) return "API Key not configured. Please check your environment.";
-
   try {
     const algoDef = ALGORITHMS[algorithm];
     const pseudocode = algoDef?.pseudoCode || "N/A";
@@ -43,8 +40,9 @@ export const generateExplanation = async (
       6. Keep response length manageable for a chat window (approx 3-5 sentences unless detail is requested).
     `;
 
+    // Use gemini-3-flash-preview for basic text tasks like educational explanations.
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
 
