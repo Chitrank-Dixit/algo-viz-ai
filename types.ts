@@ -6,6 +6,7 @@ export enum AlgoCategory {
   Tree = 'Tree',
   Graph = 'Graph',
   Array = 'Array Operations',
+  Math = 'Mathematical Algorithms',
 }
 
 export enum AlgorithmName {
@@ -28,6 +29,7 @@ export enum AlgorithmName {
   DFS = 'Depth-First Search',
   LeftRotate = 'Left Array Rotation',
   RightRotate = 'Right Array Rotation',
+  Sieve = 'Sieve of Eratosthenes',
 }
 
 export interface SimulationStep {

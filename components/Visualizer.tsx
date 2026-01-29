@@ -21,13 +21,66 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
 
   const { data, comparedIndices, swappedIndices, sortedIndices, pivotIndex, auxiliaryData, graphAdjacency } = step;
 
+  // Math Algorithms (Sieve of Eratosthenes) Visualizer
+  if (category === AlgoCategory.Math) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-6 overflow-y-auto p-4">
+        <div className="text-center mb-4">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Number Grid (2 - {data[data.length-1]})</h3>
+        </div>
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 max-w-2xl mx-auto">
+            {data.map((value, idx) => {
+                const isPrime = sortedIndices.includes(idx); // Used for final prime discovery
+                const isCurrentPrime = comparedIndices.includes(idx);
+                const isCurrentlyMarking = swappedIndices.includes(idx);
+
+                let borderColor = 'border-gray-800';
+                let bgColor = 'bg-gray-900/30';
+                let textColor = 'text-gray-500';
+                let scale = 'scale-100';
+
+                if (isPrime) {
+                    borderColor = 'border-emerald-500';
+                    bgColor = 'bg-emerald-500/20';
+                    textColor = 'text-emerald-400 font-bold';
+                    scale = 'scale-105';
+                } else if (isCurrentPrime) {
+                    borderColor = 'border-yellow-500';
+                    bgColor = 'bg-yellow-500/30';
+                    textColor = 'text-yellow-400 font-bold';
+                    scale = 'scale-110';
+                } else if (isCurrentlyMarking) {
+                    borderColor = 'border-red-500';
+                    bgColor = 'bg-red-500/40';
+                    textColor = 'text-red-200';
+                    scale = 'scale-110';
+                }
+
+                return (
+                    <div 
+                        key={idx} 
+                        className={`w-10 h-10 sm:w-12 sm:h-12 border rounded-md flex items-center justify-center text-xs sm:text-sm transition-all duration-200 ${borderColor} ${bgColor} ${textColor} ${scale}`}
+                    >
+                        {value}
+                    </div>
+                );
+            })}
+        </div>
+        <div className="max-w-md w-full text-center mt-6">
+            <p className="text-xs text-gray-500 font-mono bg-gray-900/50 p-3 rounded-lg border border-gray-800 italic">
+                {step.description}
+            </p>
+        </div>
+      </div>
+    );
+  }
+
   // Array Operations (Rotation) Visualizer
   if (category === AlgoCategory.Array) {
     const bufferValue = auxiliaryData && auxiliaryData.length > 0 ? auxiliaryData[0] : null;
 
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-12">
-        {/* Buffer Area */}
         <div className="flex flex-col items-center gap-2">
             <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Temp Buffer</span>
             <div className={`w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center transition-all duration-300 ${bufferValue !== null ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 scale-110 shadow-lg shadow-indigo-500/20' : 'border-gray-800 bg-gray-900/50 text-gray-700'}`}>
@@ -40,7 +93,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
             {bufferValue !== null && <ArrowBigDownDash className="text-indigo-500/50 animate-bounce" size={16} />}
         </div>
 
-        {/* Array Display */}
         <div className="flex items-center gap-3">
             {data.map((value, idx) => {
                 const isActive = comparedIndices.includes(idx);
@@ -150,7 +202,6 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
                 <svg width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
                     {graphAdjacency && graphAdjacency.map((neighbors, u) => {
                          const { x: x1, y: y1 } = getCoords(u);
-                         // Fix: Calculate x2 and y2 for each neighbor node v
                          return neighbors.map(v => {
                              if (u < v) {
                                  const { x: x2, y: y2 } = getCoords(v);

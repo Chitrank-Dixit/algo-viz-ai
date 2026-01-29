@@ -271,6 +271,47 @@ return -1`,
     }
   },
 
+  [AlgorithmName.Sieve]: {
+    name: AlgorithmName.Sieve,
+    category: AlgoCategory.Math,
+    description: 'An ancient algorithm for finding all prime numbers up to any given limit by iteratively marking the multiples of each prime.',
+    defaultData: [30],
+    complexity: { time: 'O(n log log n)', space: 'O(n)' },
+    pseudoCode: `create a list of consecutive integers from 2 to n: (2, 3, 4, ..., n)
+let p = 2
+while p^2 <= n:
+  if p is not marked:
+    for i from p*p to n in increments of p:
+      mark i as non-prime
+  p = p + 1`,
+    generator: function* (initialData: number[]) {
+        const n = initialData[0] || 30;
+        const nums = Array.from({length: n - 1}, (_, i) => i + 2);
+        const isPrime = Array.from({length: n - 1}, () => true);
+        
+        yield createStep(nums, [], [], [], `Starting Sieve of Eratosthenes up to ${n}.`);
+
+        for (let p = 2; p * p <= n; p++) {
+            const pIdx = p - 2;
+            yield createStep(nums, [pIdx], [], [], `Checking if ${p} is prime...`);
+
+            if (isPrime[pIdx]) {
+                yield createStep(nums, [pIdx], [], [], `${p} is prime. Marking its multiples starting from ${p * p}...`, pIdx);
+                
+                for (let i = p * p; i <= n; i += p) {
+                    const markIdx = i - 2;
+                    isPrime[markIdx] = false;
+                    yield createStep(nums, [pIdx], [markIdx], [], `Marking ${i} as non-prime (multiple of ${p}).`, pIdx);
+                }
+            } else {
+                yield createStep(nums, [pIdx], [], [], `${p} is already marked as non-prime. Skipping.`);
+            }
+        }
+        const primesIndices = isPrime.map((p, idx) => p ? idx : -1).filter(idx => idx !== -1);
+        yield createStep(nums, [], [], primesIndices, `Finished! The numbers in green are prime.`);
+    }
+  },
+
   [AlgorithmName.LeftRotate]: {
     name: AlgorithmName.LeftRotate,
     category: AlgoCategory.Array,
@@ -285,18 +326,15 @@ return -1`,
     generator: function* (initialData: number[]) {
       let arr = [...initialData];
       let n = arr.length;
-      let k = 3; // Number of rotations for demo
-
+      let k = 3;
       for (let rotation = 1; rotation <= k; rotation++) {
         yield createStep(arr, [], [], [], `Rotation ${rotation}: Storing first element ${arr[0]}`);
         let temp = arr[0];
         yield createStep(arr, [0], [], [], `Stored ${temp} in buffer`, undefined, [temp]);
-
         for (let i = 0; i < n - 1; i++) {
           yield createStep(arr, [i, i + 1], [i], [], `Shifting ${arr[i+1]} to index ${i}`, undefined, [temp]);
           arr[i] = arr[i + 1];
         }
-        
         yield createStep(arr, [n - 1], [n - 1], [], `Placing ${temp} at last position`, undefined, [temp]);
         arr[n - 1] = temp;
         yield createStep(arr, [], Array.from({length: n}, (_, i) => i), [], `Completed rotation ${rotation}`, undefined, []);
@@ -320,17 +358,14 @@ return -1`,
       let arr = [...initialData];
       let n = arr.length;
       let k = 3;
-
       for (let rotation = 1; rotation <= k; rotation++) {
         yield createStep(arr, [], [], [], `Rotation ${rotation}: Storing last element ${arr[n-1]}`);
         let temp = arr[n-1];
         yield createStep(arr, [n-1], [], [], `Stored ${temp} in buffer`, undefined, [temp]);
-
         for (let i = n - 1; i > 0; i--) {
           yield createStep(arr, [i, i - 1], [i], [], `Shifting ${arr[i-1]} to index ${i}`, undefined, [temp]);
           arr[i] = arr[i - 1];
         }
-        
         yield createStep(arr, [0], [0], [], `Placing ${temp} at first position`, undefined, [temp]);
         arr[0] = temp;
         yield createStep(arr, [], Array.from({length: n}, (_, i) => i), [], `Completed rotation ${rotation}`, undefined, []);
@@ -414,6 +449,47 @@ return -1`,
       }
     },
 
+    [AlgorithmName.Preorder]: {
+      name: AlgorithmName.Preorder,
+      category: AlgoCategory.Tree,
+      description: 'Root, Left, Right.',
+      defaultData: [1, 2, 3, 4, 5, 6, 7],
+      complexity: { time: 'O(n)', space: 'O(h)' },
+      pseudoCode: `visit(node); preorder(node.left); preorder(node.right);`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData], visited: number[] = [], output: number[] = [];
+        function* traverse(idx: number): Generator<SimulationStep> {
+            if (idx >= arr.length) return;
+            visited.push(idx); output.push(arr[idx]);
+            yield createStep(arr, [idx], [], visited, `Visiting ${arr[idx]} (Root)`, undefined, output);
+            yield* traverse(2 * idx + 1);
+            yield* traverse(2 * idx + 2);
+        }
+        yield* traverse(0);
+      }
+    },
+
+    [AlgorithmName.Postorder]: {
+      name: AlgorithmName.Postorder,
+      category: AlgoCategory.Tree,
+      description: 'Left, Right, Root.',
+      defaultData: [1, 2, 3, 4, 5, 6, 7],
+      complexity: { time: 'O(n)', space: 'O(h)' },
+      pseudoCode: `postorder(node.left); postorder(node.right); visit(node);`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData], visited: number[] = [], output: number[] = [];
+        function* traverse(idx: number): Generator<SimulationStep> {
+            if (idx >= arr.length) return;
+            yield createStep(arr, [idx], [], visited, `Checking Node ${arr[idx]}`, undefined, output);
+            yield* traverse(2 * idx + 1);
+            yield* traverse(2 * idx + 2);
+            visited.push(idx); output.push(arr[idx]);
+            yield createStep(arr, [idx], [], visited, `Visiting ${arr[idx]}`, undefined, output);
+        }
+        yield* traverse(0);
+      }
+    },
+
     [AlgorithmName.BFS]: {
       name: AlgorithmName.BFS,
       category: AlgoCategory.Graph,
@@ -431,6 +507,33 @@ return -1`,
                 if (!visited.includes(neighbor)) {
                     visited.push(neighbor); q.push(neighbor);
                     yield createStep(arr, [cur, neighbor], [], visited, `Added ${arr[neighbor]}`, undefined, q, adj);
+                }
+            }
+        }
+      }
+    },
+
+    [AlgorithmName.DFS]: {
+      name: AlgorithmName.DFS,
+      category: AlgoCategory.Graph,
+      description: 'Explores as far as possible along each branch before backtracking.',
+      defaultData: [0, 1, 2, 3, 4, 5, 6],
+      complexity: { time: 'O(V + E)', space: 'O(V)' },
+      pseudoCode: `while stack: node = s.pop(); if !vis: visit(node); for n in adj: s.push(n)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData], n = arr.length, adj = generateGraph(n);
+        const stack = [0], visited: number[] = [];
+        while (stack.length > 0) {
+            const cur = stack.pop()!;
+            if (!visited.includes(cur)) {
+                visited.push(cur);
+                yield createStep(arr, [cur], [], visited, `Visiting Node ${arr[cur]}`, undefined, stack, adj);
+                const neighbors = [...adj[cur]].reverse();
+                for (const neighbor of neighbors) {
+                    if (!visited.includes(neighbor)) {
+                        stack.push(neighbor);
+                        yield createStep(arr, [cur, neighbor], [], visited, `Added ${arr[neighbor]} to Stack`, undefined, stack, adj);
+                    }
                 }
             }
         }
