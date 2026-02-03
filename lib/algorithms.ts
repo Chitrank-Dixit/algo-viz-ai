@@ -10,7 +10,9 @@ const createStep = (
   description: string = '',
   pivotIndex?: number,
   auxiliaryData?: number[],
-  graphAdjacency?: number[][]
+  graphAdjacency?: number[][],
+  edgeWeights?: Record<string, number>,
+  mstEdges?: string[]
 ): SimulationStep => ({
   data: [...data],
   comparedIndices,
@@ -20,6 +22,8 @@ const createStep = (
   pivotIndex,
   auxiliaryData: auxiliaryData ? [...auxiliaryData] : undefined,
   graphAdjacency: graphAdjacency ? JSON.parse(JSON.stringify(graphAdjacency)) : undefined,
+  edgeWeights: edgeWeights ? { ...edgeWeights } : undefined,
+  mstEdges: mstEdges ? [...mstEdges] : undefined,
 });
 
 // Helper to generate a deterministic graph (Adjacency List) based on node count
@@ -39,6 +43,22 @@ const generateGraph = (n: number): number[][] => {
       addEdge(1, Math.floor(n/2) + 1);
   }
   return adj.map(row => row.sort((a,b) => a - b));
+};
+
+// Helper for Weighted Graphs (Dijkstra/Prim/Kruskal)
+const generateWeightedGraph = (n: number) => {
+  const adj = generateGraph(n);
+  const weights: Record<string, number> = {};
+  for (let u = 0; u < n; u++) {
+    for (const v of adj[u]) {
+      const key = [u, v].sort().join('-');
+      if (!weights[key]) {
+        // Deterministic weights based on node indices to keep it consistent
+        weights[key] = ((u * 3 + v * 7) % 15) + 1;
+      }
+    }
+  }
+  return { adj, weights };
 };
 
 export const ALGORITHMS: Record<string, any> = {
@@ -670,6 +690,170 @@ while p^2 <= n:
                 }
             }
         }
+      }
+    },
+
+    [AlgorithmName.Dijkstra]: {
+      name: AlgorithmName.Dijkstra,
+      category: AlgoCategory.Graph,
+      description: "Finds the shortest paths from a source node to all other nodes in a weighted graph.",
+      defaultData: [0, 1, 2, 3, 4, 5, 6],
+      complexity: { time: 'O((V+E) log V)', space: 'O(V)' },
+      pseudoCode: `dist[source] = 0, others = Infinity
+PQ.push(source, 0)
+while PQ:
+  u = PQ.pop_min()
+  for each neighbor v of u:
+    if dist[u] + weight(u,v) < dist[v]:
+      dist[v] = dist[u] + weight(u,v)
+      PQ.update(v, dist[v])`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData], n = arr.length;
+        const { adj, weights } = generateWeightedGraph(n);
+        const dist = Array(n).fill(Infinity);
+        const visited: number[] = [];
+        const source = 0;
+        dist[source] = 0;
+
+        yield createStep(arr, [], [], [], `Starting Dijkstra from Node ${arr[source]}. Initialize distances to infinity.`, undefined, dist, adj, weights);
+
+        const pq = [source];
+        while (pq.length > 0) {
+          pq.sort((a, b) => dist[a] - dist[b]);
+          const u = pq.shift()!;
+          
+          if (visited.includes(u)) continue;
+          visited.push(u);
+
+          yield createStep(arr, [u], [], visited, `Processing node ${arr[u]} with min distance ${dist[u]}.`, undefined, dist, adj, weights);
+
+          for (const v of adj[u]) {
+            const edgeKey = [u, v].sort().join('-');
+            const weight = weights[edgeKey];
+            const newDist = dist[u] + weight;
+            
+            yield createStep(arr, [u, v], [], visited, `Checking neighbor ${arr[v]} via edge weight ${weight}...`, undefined, dist, adj, weights);
+
+            if (newDist < dist[v]) {
+              dist[v] = newDist;
+              pq.push(v);
+              yield createStep(arr, [u, v], [v], visited, `Relaxed edge! New distance to ${arr[v]} is ${newDist}.`, undefined, dist, adj, weights);
+            } else {
+              yield createStep(arr, [u, v], [], visited, `No update needed for ${arr[v]}.`, undefined, dist, adj, weights);
+            }
+          }
+        }
+        yield createStep(arr, [], [], visited, `Dijkstra complete! Shortest distances found.`, undefined, dist, adj, weights);
+      }
+    },
+
+    [AlgorithmName.PrimMST]: {
+      name: AlgorithmName.PrimMST,
+      category: AlgoCategory.Graph,
+      description: "Finds the minimum spanning tree for a weighted undirected graph.",
+      defaultData: [0, 1, 2, 3, 4, 5, 6],
+      complexity: { time: 'O(E log V)', space: 'O(V)' },
+      pseudoCode: `MST = {}
+Visited = {source}
+while Visited.size < V:
+  find min edge (u, v) where u in Visited and v not in Visited
+  MST.add(edge)
+  Visited.add(v)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData], n = arr.length;
+        const { adj, weights } = generateWeightedGraph(n);
+        const visited = new Set<number>();
+        const mstEdges: string[] = [];
+        const source = 0;
+        visited.add(source);
+
+        yield createStep(arr, [source], [], Array.from(visited), `Starting Prim's MST from Node ${arr[source]}.`, undefined, undefined, adj, weights, mstEdges);
+
+        while (visited.size < n) {
+          let minWeight = Infinity;
+          let selectedEdge: [number, number] | null = null;
+
+          // Find smallest edge connecting a visited node to an unvisited one
+          for (const u of visited) {
+            for (const v of adj[u]) {
+              if (!visited.has(v)) {
+                const key = [u, v].sort().join('-');
+                const w = weights[key];
+                if (w < minWeight) {
+                  minWeight = w;
+                  selectedEdge = [u, v];
+                }
+              }
+            }
+          }
+
+          if (selectedEdge) {
+            const [u, v] = selectedEdge;
+            const key = [u, v].sort().join('-');
+            
+            yield createStep(arr, [u, v], [u, v], Array.from(visited), `Found smallest edge connecting to unvisited node: ${key} (weight ${minWeight})`, undefined, undefined, adj, weights, mstEdges);
+            
+            mstEdges.push(key);
+            visited.add(v);
+            
+            yield createStep(arr, [], [], Array.from(visited), `Added Node ${arr[v]} and edge ${key} to MST.`, undefined, undefined, adj, weights, mstEdges);
+          } else {
+            // Graph is disconnected
+            break;
+          }
+        }
+        yield createStep(arr, [], [], Array.from(visited), `Prim's Algorithm complete! Minimum Spanning Tree found.`, undefined, undefined, adj, weights, mstEdges);
+      }
+    },
+
+    [AlgorithmName.KruskalMST]: {
+      name: AlgorithmName.KruskalMST,
+      category: AlgoCategory.Graph,
+      description: "Finds the minimum spanning tree by processing edges in non-decreasing order of weight.",
+      defaultData: [0, 1, 2, 3, 4, 5, 6],
+      complexity: { time: 'O(E log E)', space: 'O(V)' },
+      pseudoCode: `Sort all edges by weight
+Initialize disjoint sets for each vertex
+for each edge (u, v) in sorted edges:
+  if find(u) != find(v):
+    Add (u, v) to MST
+    Union(u, v)`,
+      generator: function* (initialData: number[]) {
+        const arr = [...initialData], n = arr.length;
+        const { adj, weights } = generateWeightedGraph(n);
+        const edgesList = Object.entries(weights).map(([key, w]) => {
+          const [u, v] = key.split('-').map(Number);
+          return { u, v, w, key };
+        }).sort((a, b) => a.w - b.w);
+
+        const parent = Array.from({ length: n }, (_, i) => i);
+        const find = (i: number): number => {
+          if (parent[i] === i) return i;
+          return parent[i] = find(parent[i]);
+        };
+
+        const mstEdges: string[] = [];
+        const visitedNodes = new Set<number>();
+
+        yield createStep(arr, [], [], [], "Sorting all edges by weight...", undefined, undefined, adj, weights, mstEdges);
+
+        for (const { u, v, w, key } of edgesList) {
+          yield createStep(arr, [u, v], [], Array.from(visitedNodes), `Checking edge ${key} with weight ${w}...`, undefined, undefined, adj, weights, mstEdges);
+
+          const rootU = find(u);
+          const rootV = find(v);
+
+          if (rootU !== rootV) {
+            parent[rootU] = rootV;
+            mstEdges.push(key);
+            visitedNodes.add(u);
+            visitedNodes.add(v);
+            yield createStep(arr, [u, v], [], Array.from(visitedNodes), `Edge ${key} connects different components. Adding to MST.`, undefined, undefined, adj, weights, mstEdges);
+          } else {
+            yield createStep(arr, [u, v], [u, v], Array.from(visitedNodes), `Edge ${key} would form a cycle. Skipping.`, undefined, undefined, adj, weights, mstEdges);
+          }
+        }
+        yield createStep(arr, [], [], Array.from(visitedNodes), `Kruskal's Algorithm complete! Minimum Spanning Tree found.`, undefined, undefined, adj, weights, mstEdges);
       }
     }
 };

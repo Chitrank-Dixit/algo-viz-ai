@@ -19,7 +19,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
     );
   }
 
-  const { data, comparedIndices, swappedIndices, sortedIndices, pivotIndex, auxiliaryData, graphAdjacency } = step;
+  const { data, comparedIndices, swappedIndices, sortedIndices, pivotIndex, auxiliaryData, graphAdjacency, edgeWeights, mstEdges } = step;
 
   // Math Algorithms (Sieve of Eratosthenes) Visualizer
   if (category === AlgoCategory.Math) {
@@ -30,7 +30,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
         </div>
         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 max-w-2xl mx-auto">
             {data.map((value, idx) => {
-                const isPrime = sortedIndices.includes(idx); // Used for final prime discovery
+                const isPrime = sortedIndices.includes(idx); 
                 const isCurrentPrime = comparedIndices.includes(idx);
                 const isCurrentlyMarking = swappedIndices.includes(idx);
 
@@ -189,13 +189,14 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
     );
   }
 
-  // Graph Visualizer
+  // Graph Visualizer (Enhanced for Dijkstra and Prim MST)
   if (category === AlgoCategory.Graph) {
       const centerX = 400, centerY = 250, radius = 180, n = data.length;
       const getCoords = (idx: number) => {
           const angle = (idx / n) * 2 * Math.PI - Math.PI / 2;
           return { x: centerX + radius * Math.cos(angle), y: centerY + radius * Math.sin(angle) };
       };
+      
       return (
         <div className="w-full h-full flex flex-col items-center justify-between pb-4">
              <div className="flex-1 w-full relative overflow-auto flex items-center justify-center">
@@ -205,7 +206,44 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
                          return neighbors.map(v => {
                              if (u < v) {
                                  const { x: x2, y: y2 } = getCoords(v);
-                                 return <line key={`${u}-${v}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#374151" strokeWidth="2" />;
+                                 const edgeKey = [u, v].sort().join('-');
+                                 const weight = edgeWeights ? edgeWeights[edgeKey] : null;
+                                 
+                                 // Highlight path for Dijkstra or MST edges
+                                 const isMstEdge = mstEdges && mstEdges.includes(edgeKey);
+                                 const isCurrentActiveEdge = comparedIndices.includes(u) && comparedIndices.includes(v);
+                                 const isPathEdge = algorithm === AlgorithmName.Dijkstra && sortedIndices.includes(u) && sortedIndices.includes(v);
+
+                                 let stroke = "#374151";
+                                 let strokeWidth = "2";
+
+                                 if (isMstEdge) {
+                                     stroke = "#10b981";
+                                     strokeWidth = "5";
+                                 } else if (isCurrentActiveEdge) {
+                                     stroke = "#facc15";
+                                     strokeWidth = "4";
+                                 } else if (isPathEdge) {
+                                     stroke = "#3b82f6";
+                                     strokeWidth = "3";
+                                 }
+
+                                 return (
+                                     <g key={`${u}-${v}`}>
+                                         <line 
+                                            x1={x1} y1={y1} x2={x2} y2={y2} 
+                                            stroke={stroke} 
+                                            strokeWidth={strokeWidth} 
+                                            className="transition-all duration-300"
+                                         />
+                                         {weight !== null && (
+                                             <g transform={`translate(${(x1 + x2) / 2}, ${(y1 + y2) / 2})`}>
+                                                 <rect x="-10" y="-10" width="20" height="20" fill="#111827" rx="4" />
+                                                 <text dy=".35em" textAnchor="middle" fill="#6b7280" fontSize="10" fontWeight="bold">{weight}</text>
+                                             </g>
+                                         )}
+                                     </g>
+                                 );
                              }
                              return null;
                          });
@@ -213,12 +251,22 @@ export const Visualizer: React.FC<VisualizerProps> = ({ step, algorithm, categor
                     {data.map((val, idx) => {
                         const { x, y } = getCoords(idx);
                         let fillColor = '#1f2937', strokeColor = '#4b5563', textColor = '#9ca3af', scale = 1;
-                        if (sortedIndices.includes(idx)) { fillColor = '#059669'; strokeColor = '#34d399'; textColor = '#ffffff'; }
+                        if (sortedIndices.includes(idx)) { fillColor = '#065f46'; strokeColor = '#10b981'; textColor = '#ffffff'; }
                         if (comparedIndices.includes(idx)) { fillColor = '#d97706'; strokeColor = '#fbbf24'; textColor = '#ffffff'; scale = 1.1; }
+                        if (swappedIndices.includes(idx)) { fillColor = '#991b1b'; strokeColor = '#ef4444'; textColor = '#ffffff'; }
+
+                        const distance = auxiliaryData ? auxiliaryData[idx] : null;
+
                         return (
-                            <g key={idx} style={{ transformOrigin: `${x}px ${y}px`, transform: `scale(${scale})` }}>
+                            <g key={idx} style={{ transformOrigin: `${x}px ${y}px`, transform: `scale(${scale})`, transition: 'all 0.3s ease' }}>
                                 <circle cx={x} cy={y} r="24" fill={fillColor} stroke={strokeColor} strokeWidth="3" />
                                 <text x={x} y={y} dy=".3em" textAnchor="middle" fill={textColor} fontSize="14" fontWeight="bold">{val}</text>
+                                {distance !== null && distance !== Infinity && (
+                                    <g transform={`translate(${x}, ${y - 35})`}>
+                                        <rect x="-15" y="-8" width="30" height="16" fill="#1e293b" rx="4" stroke="#334155" strokeWidth="1" />
+                                        <text dy=".35em" textAnchor="middle" fill="#94a3b8" fontSize="10" fontWeight="bold">{distance}</text>
+                                    </g>
+                                )}
                             </g>
                         );
                     })}

@@ -28,6 +28,9 @@ export enum AlgorithmName {
   Postorder = 'Postorder Traversal',
   BFS = 'Breadth-First Search',
   DFS = 'Depth-First Search',
+  Dijkstra = 'Dijkstra Shortest Path',
+  PrimMST = 'Prim\'s MST',
+  KruskalMST = 'Kruskal\'s MST',
   LeftRotate = 'Left Array Rotation',
   RightRotate = 'Right Array Rotation',
   Sieve = 'Sieve of Eratosthenes',
@@ -43,6 +46,8 @@ export interface SimulationStep {
   codeLine?: number; // Highlighted line of pseudo-code
   auxiliaryData?: number[]; // For things like Merge Sort auxiliary array or Buffer element
   graphAdjacency?: number[][]; // Adjacency list for graph algorithms [[1,2], [0,3], ...]
+  edgeWeights?: Record<string, number>; // Weights for graph edges, key e.g., "0-1"
+  mstEdges?: string[]; // Specifically for MST algorithms, e.g., ["0-1", "1-2"]
 }
 
 export interface AlgorithmDef {
